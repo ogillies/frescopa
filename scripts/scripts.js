@@ -23,6 +23,13 @@ import {
 import { trackHistory } from './commerce.js';
 import initializeDropins from './initializers/index.js';
 import { initializeConfig, getRootPath, getListOfRootPaths } from './configs.js';
+import {
+  initMartech,
+  updateUserConsent,
+  martechEager,
+  martechLazy,
+  martechDelayed,
+} from '../plugins/martech/src/index.js';
 
 const AUDIENCES = {
   mobile: () => window.innerWidth < 600,
@@ -236,6 +243,35 @@ function preloadFile(href, as) {
  * @param {Element} doc The container element
  */
 async function loadEager(doc) {
+
+  // Hook in your consent check to determine if personalization can run.
+  const isConsentGiven = true; /* your consent logic here */
+
+  const martechLoadedPromise = initMartech(
+    // 1. WebSDK Configuration
+    // Docs: https://experienceleague.adobe.com/en/docs/experience-platform/web-sdk/commands/configure/overview#configure-js
+    {
+      datastreamId: getConfigValue('aep.datastream'),
+      orgId: getConfigValue('aep.orgId'),
+      debugEnabled: true,
+      defaultConsent: "in",
+      onBeforeEventSend: (payload) => {
+        // This callback allows you to modify the payload before it's sent.
+        // Return false to prevent the event from being sent.
+      },
+      edgeConfigOverrides: {
+        // Optional datastream overrides for different environments.
+      },
+    },
+    // 2. Library Configuration
+    {
+      personalization: !!getMetadata('target') && isConsentGiven,
+      launchUrls: [getConfigValue('aep.launchUrl')],
+      // See the API Reference for all available options.
+    },
+  );
+
+
   document.documentElement.lang = 'en';
   decorateTemplateAndTheme();
 
@@ -319,10 +355,15 @@ async function loadEager(doc) {
 
     // Template Decorations
     await applyTemplates(doc);
-
+    
     // Load LCP blocks
-    await loadSection(main.querySelector('.section'), waitForFirstImage);
+    await Promise.all([
+      martechLoadedPromise.then(martechEager),
+      loadSection(main.querySelector('.section'), waitForFirstImage)
+    ]);
+
     document.body.classList.add('appear');
+
   }
 
   // notify that the page is ready for eager loading
@@ -355,6 +396,7 @@ async function loadLazy(doc) {
   await Promise.all([
     loadHeader(doc.querySelector('header')),
     loadFooter(doc.querySelector('footer')),
+    martechLazy(),
     loadCSS(`${window.hlx.codeBasePath}/styles/lazy-styles.css`),
     loadCSS(`${window.hlx.codeBasePath}/styles/article.css`),
     loadFonts(),
@@ -384,7 +426,10 @@ async function loadLazy(doc) {
  * without impacting the user experience.
  */
 function loadDelayed() {
-  window.setTimeout(() => import('./delayed.js'), 3000);
+   window.setTimeout(() => {
+    martechDelayed();
+    import('./delayed.js');
+  }, 3000);
   // load anything that can be postponed to the latest here
 }
 
