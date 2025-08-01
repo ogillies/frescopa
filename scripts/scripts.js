@@ -253,8 +253,8 @@ async function loadEager(doc) {
     {
       datastreamId: getConfigValue('aep.datastream'),
       orgId: getConfigValue('aep.orgId'),
-      debugEnabled: true,
-      defaultConsent: "in",
+      debugEnabled:  getConfigValue('aep.debug'),
+      defaultConsent:  getConfigValue('aep.defaultConsent'),
       onBeforeEventSend: (payload) => {
         // This callback allows you to modify the payload before it's sent.
         // Return false to prevent the event from being sent.
