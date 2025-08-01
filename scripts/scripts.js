@@ -22,7 +22,7 @@ import {
 } from './aem.js';
 import { trackHistory } from './commerce.js';
 import initializeDropins from './initializers/index.js';
-import { initializeConfig, getRootPath, getListOfRootPaths } from './configs.js';
+import { initializeConfig, getRootPath, getListOfRootPaths, getConfigValue } from './configs.js';
 import {
   initMartech,
   updateUserConsent,
